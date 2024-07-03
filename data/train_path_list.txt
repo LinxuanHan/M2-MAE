@@ -1,0 +1,4 @@
+E:\3DUNet-BraTS2023_ET\data\data\BraTS-GLI-01409-000.nii.gz E:\3DUNet-BraTS2023_ET\data\label\BraTS-GLI-01409-000.nii.gz
+E:\3DUNet-BraTS2023_ET\data\data\BraTS-GLI-00500-001.nii.gz E:\3DUNet-BraTS2023_ET\data\label\BraTS-GLI-00500-001.nii.gz
+E:\3DUNet-BraTS2023_ET\data\data\BraTS-GLI-00507-000.nii.gz E:\3DUNet-BraTS2023_ET\data\label\BraTS-GLI-00507-000.nii.gz
+E:\3DUNet-BraTS2023_ET\data\data\BraTS-GLI-01404-000.nii.gz E:\3DUNet-BraTS2023_ET\data\label\BraTS-GLI-01404-000.nii.gz

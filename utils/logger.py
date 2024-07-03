@@ -25,7 +25,7 @@ class Train_Logger():
     def update_csv(self,item):
         tmp = pd.DataFrame(item,index=[0])
         if self.log is not None:
-            self.log = self.log.append(tmp, ignore_index=True)
+            self.log = pd.concat([self.log,tmp], ignore_index=True)
         else:
             self.log = tmp
         self.log.to_csv('%s/%s.csv' %(self.save_path,self.save_name), index=False)
@@ -53,7 +53,7 @@ class Test_Logger():
     def update_csv(self,item):
         tmp = pd.DataFrame(item,index=[0])
         if self.log is not None:
-            self.log = self.log.append(tmp, ignore_index=True)
+            self.log = pd.concat([self.log,tmp], ignore_index=True)
         else:
             self.log = tmp
         self.log.to_csv('%s/%s.csv' %(self.save_path,self.save_name), index=False)

@@ -4,24 +4,8 @@
 
 import torch
 import torch.nn as nn
-class MAELoss(nn.Module):
 
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, pred):
-        loss = pred.mean()
-        return loss
-
-class MSELoss(nn.Module):
-
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, pred, target):
-        loss = (pred[:] - target[:])**2
-        return loss.mean()
-        # return torch.clamp(loss.mean(), 0, 1)
+from utils import Hausdorff
 
 class DiceLoss(nn.Module):
 
@@ -140,3 +124,65 @@ class TverskyLoss(nn.Module):
 
         dice = dice / pred.size(1)
         return torch.clamp((1 - dice).mean(), 0, 2)
+
+
+class TverskyLoss(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred, target):
+        smooth = 1
+
+        dice = 0.
+
+        for i in range(pred.size(1)):
+            dice += (pred[:, i] * target[:, i]).sum(dim=1).sum(dim=1).sum(dim=1) / (
+                        (pred[:, i] * target[:, i]).sum(dim=1).sum(dim=1).sum(dim=1) +
+                        0.3 * (pred[:, i] * (1 - target[:, i])).sum(dim=1).sum(dim=1).sum(dim=1) + 0.7 * (
+                                    (1 - pred[:, i]) * target[:, i]).sum(dim=1).sum(dim=1).sum(dim=1) + smooth)
+
+        dice = dice / pred.size(1)
+        return torch.clamp((1 - dice).mean(), 0, 2)
+class HausdorffLoss(nn.Module):
+    def __init__(self, p=2):
+        super(HausdorffLoss, self).__init__()
+        self.p = p
+
+    def torch2D_Hausdorff_distance(self, x, y, p=2):  # Input be like (Batch,1, width,height) or (Batch, width,height)
+        x = x.float()
+        y = y.float()
+        distance_matrix = torch.cdist(x, y, p=p)  # p=2 means Euclidean Distance
+
+        value1 = distance_matrix.min(2)[0].max(1, keepdim=True)[0]
+        value2 = distance_matrix.min(1)[0].max(1, keepdim=True)[0]
+
+        value = torch.cat((value1, value2), dim=1)
+
+        return value.max(1)[0].mean()
+
+    def forward(self, x, y):  # Input be like (Batch,height,width)
+        loss = self.torch2D_Hausdorff_distance(x, y, self.p)
+        return loss
+class Mixup(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, pred, target):
+        hdLoss1 = 0.
+        smooth = 1
+        dice = 0.
+
+        for i in range(pred.size(1)):
+            HD1 = Hausdorff.HausdorffLoss()
+            hdLoss1 += HD1(pred[:, i].unsqueeze(1),
+                          target[:,i].unsqueeze(1))
+            dice += (pred[:, i] * target[:, i]).sum(dim=1).sum(dim=1).sum(dim=1) / (
+                        (pred[:, i] * target[:, i]).sum(dim=1).sum(dim=1).sum(dim=1) +
+                        0.3 * (pred[:, i] * (1 - target[:, i])).sum(dim=1).sum(dim=1).sum(dim=1) + 0.7 * (
+                                    (1 - pred[:, i]) * target[:, i]).sum(dim=1).sum(dim=1).sum(dim=1) + smooth)
+
+        dice = dice / pred.size(1)
+        hdLoss1 = hdLoss1 / pred.size(1)
+        return torch.clamp((1 - dice).mean(), 0, 2) + torch.clamp(hdLoss1.mean(), 0, 2)

@@ -34,7 +34,6 @@ class RandomResize:
         img = F.interpolate(img, size=self.shape,mode='trilinear', align_corners=False)
         mask = F.interpolate(mask, size=self.shape, mode="nearest")
         return img[0], mask[0].long()
-
 class RandomCrop3D:
     def __init__(self, slices):
         self.slices =  slices
@@ -79,10 +78,11 @@ class RandomCrop:
         ss, es = self._get_range(mask.size(1), self.slices)
         # print(img.shape,mask.shape)
         # print(self.shape, img.shape, mask.shape)
+        # print(img.size)
         tmp_img = torch.zeros((img.size(0), self.slices, img.size(2), img.size(3)))
         tmp_mask = torch.zeros((mask.size(0), self.slices, mask.size(2), mask.size(3)))
-        tmp_img[:,:es-ss] = img[:,ss:es]
-        tmp_mask[:,:es-ss] = mask[:,ss:es]
+        tmp_img[:,:es-ss,:,:] = img[:,ss:es,:,:]
+        tmp_mask[:,:es-ss,:,:] = mask[:,ss:es,:,:]
         return tmp_img, tmp_mask
 
 class RandomFlip_LR:

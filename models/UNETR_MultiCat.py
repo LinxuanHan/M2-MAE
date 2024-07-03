@@ -181,68 +181,51 @@ class UNETR(nn.Module):
         self.out = UnetOutBlock(spatial_dims=3, in_channels=feature_size, out_channels=out_channels)  # type: ignore
         self.output1 = nn.Sequential(
             nn.Conv3d(4, 4, 1, 1),
-            nn.Softmax(dim=1)
-        )
-        self.output2 = nn.Sequential(
-            nn.Conv3d(self.hidden_size*4, 4, 1, 1),
-            nn.Upsample(scale_factor=(16, 16, 16), mode='trilinear', align_corners=False),
-            nn.Softmax(dim=1)
-        )
-        self.output3 = nn.Sequential(
-            nn.Conv3d(128, 4, 1, 1),
-            nn.Upsample(scale_factor=(8, 8, 8), mode='trilinear', align_corners=False),
-            nn.Softmax(dim=1)
-        )
-        self.output4 = nn.Sequential(
-            nn.Conv3d(64, 4, 1, 1),
-            nn.Upsample(scale_factor=(4, 4, 4), mode='trilinear', align_corners=False),
-            nn.Softmax(dim=1)
-        )
-        self.output5 = nn.Sequential(
-            nn.Conv3d(32,4,1,1),
-            nn.Upsample(scale_factor=(2, 2, 2), mode='trilinear', align_corners=False),
-            nn.Softmax(dim=1)
-        )
+            nn.Softmax(dim=1))
     def proj_feat(self, x, hidden_size, feat_size):
         x = x.view(x.size(0), feat_size[0], feat_size[1], feat_size[2], hidden_size*4)
         x = x.permute(0, 4, 1, 2, 3).contiguous()
         return x
 
     def forward(self, x_in):
-        # print(x_in[:, 0:1, :].shape)
         x_1, hidden_states_out_1 = self.vit(x_in[:, 0:1, :])
         x_2, hidden_states_out_2 = self.vit(x_in[:, 1:2, :])
         x_3, hidden_states_out_3 = self.vit(x_in[:, 2:3, :])
         x_4, hidden_states_out_4 = self.vit(x_in[:, 3:4, :])
-        x = torch.cat([x_1, x_2, x_3, x_4], dim=1)
-        # print(x.shape)
-        # hidden_states_out = torch.cat([hidden_states_out_1,hidden_states_out_2],dim=1)
+        # print(len(hidden_states_out_4))
 
         enc1 = self.encoder1(x_in)
-        x2 = torch.cat([hidden_states_out_1[3], hidden_states_out_2[3], hidden_states_out_3[3], hidden_states_out_4[3]],
+        x2 = torch.cat([hidden_states_out_1[0], hidden_states_out_2[0], hidden_states_out_3[0], hidden_states_out_4[0]],
                        dim=1)
         enc2 = self.encoder2(self.proj_feat(x2, self.hidden_size, self.feat_size))
-        x3 = torch.cat([hidden_states_out_1[6], hidden_states_out_2[6], hidden_states_out_3[6], hidden_states_out_4[6]],
+        x3 = torch.cat([hidden_states_out_1[1], hidden_states_out_2[1], hidden_states_out_3[1], hidden_states_out_4[1]],
                        dim=1)
         enc3 = self.encoder3(self.proj_feat(x3, self.hidden_size, self.feat_size))
-        x4 = torch.cat([hidden_states_out_1[9], hidden_states_out_2[9], hidden_states_out_3[9], hidden_states_out_4[9]],
+        x4 = torch.cat([hidden_states_out_1[2], hidden_states_out_2[2], hidden_states_out_3[2], hidden_states_out_4[2]],
                        dim=1)
         enc4 = self.encoder4(self.proj_feat(x4, self.hidden_size, self.feat_size))
-        dec4 = self.proj_feat(x, self.hidden_size, self.feat_size)
+        dec4 = self.proj_feat(torch.cat([x_1, x_2, x_3, x_4], dim=1), self.hidden_size, self.feat_size)
         dec3 = self.decoder5(dec4, enc4)
         dec2 = self.decoder4(dec3, enc3)
         dec1 = self.decoder3(dec2, enc2)
         out = self.decoder2(dec1, enc1)
-        logits = self.out(out)
-        return logits
+        output = self.output1(self.out(out))
         # print(dec4.shape)
-
+        if self.training:
+            # dec1 = self.output5(dec1)
+            # dec2 = self.output4(dec2)
+            # dec3 = self.output3(dec3)
+            # dec4 = self.output2(dec4)
+            return output
+            # return dec1,dec2,dec3,dec4,output
+        else:
+            return output
 if __name__ == "__main__":
     device = torch.device('cpu')
     model = UNETR(
         in_channels=1,
-        out_channels=1,
-        img_size=(128, 240, 240),
+        out_channels=4,
+        img_size=(64, 240, 240),
         feature_size=16,
         hidden_size=768,
         mlp_dim=3072,
@@ -252,14 +235,14 @@ if __name__ == "__main__":
         conv_block=True,
         res_block=True,
         dropout_rate=0.2).to(device)
-    input = torch.ones([2,4,128,240,240]).to(device)
-    # num_params = 0
-    # for param in model.parameters():
-    #     num_params += param.numel()
-    # # print(model)
-    # print('Total number of parameters: %d' % num_params)
+    input = torch.ones([2,4,64,240,240]).to(device)
+    num_params = 0
+    for param in model.parameters():
+        num_params += param.numel()
+    # print(model)
+    print('Total number of parameters: %d' % num_params)
     output = model(input)
-    print(output.shape)
+    # print(output)
     # print(output[0].shape)
     # print(output[1].shape)
     # print(output[2].shape)

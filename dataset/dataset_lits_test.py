@@ -8,58 +8,6 @@ from torch.utils.data import Dataset, DataLoader
 from glob import glob
 import math
 import SimpleITK as sitk
-from .transforms import Center_Crop, Compose,RandomResize,RandomCrop,RandomCrop3D
-from torch.utils.data import Dataset as dataset
-import random
-
-class Test_Dataset(dataset):
-    def __init__(self, args):
-
-        self.args = args
-        self.filename_list = os.listdir(self.args.test_data_path)
-
-        self.transforms = Compose([
-            RandomCrop(self.args.crop_size),
-            RandomResize(128, 240, 240),
-        ])
-
-
-    def __getitem__(self, index):
-        ct = sitk.ReadImage(os.path.join(self.args.test_data_path,self.filename_list[index]))
-        # seg = sitk.ReadImage(self.filename_list[index][1][:-7]+"_seg"+self.filename_list[index][1][-7:], sitk.sitkUInt8)
-
-        ct_array = sitk.GetArrayFromImage(ct)
-        # ct_array = np.transpose(ct_array,[3,0,1,2])
-
-        max_v = np.max(ct_array[0])
-        ct_array[0] = (ct_array[0]) / max_v
-        max_v = np.max(ct_array[1])
-        ct_array[1] = (ct_array[1]) / max_v
-        max_v = np.max(ct_array[2])
-        ct_array[2] = (ct_array[2]) / max_v
-        max_v = np.max(ct_array[3])
-        ct_array[3] = (ct_array[3]) / max_v
-        ct_array = (ct_array - 0.5) * 2
-
-
-        ct_array = ct_array.astype(np.float32)
-
-        ct_array = torch.FloatTensor(ct_array)
-        random_num = random.randint(0,3)
-        seg_array = torch.zeros([155, 240, 240])
-        # ct_array[random_num] = torch.zeros([155, 240, 240])
-
-        if self.transforms:
-            ct_array, seg_array = self.transforms(ct_array, seg_array.unsqueeze(0))
-        seg_array = torch.zeros([128, 240, 240])
-        seg_array[:] = ct_array[random_num]
-        ct_array[random_num] = torch.zeros([128, 240, 240])
-
-        return ct_array, seg_array, random_num
-
-    def __len__(self):
-        return len(self.filename_list)
-
 
 class Img_DataSet(Dataset):
     def __init__(self, data_path, label_path, args):
@@ -70,9 +18,9 @@ class Img_DataSet(Dataset):
         # 读取一个data文件并归一化 、resize
         self.ct = sitk.ReadImage(data_path)
         self.data_np = sitk.GetArrayFromImage(self.ct)
-        print(self.data_np.shape)
-        # self.data_np = np.transpose(self.data_np, [3, 0, 1, 2])
-        # self.data_np = ndimage.zoom(self.data_np, (1, 128 / 155, 128 / 240, 128 / 240), order=3)
+        self.data_np = np.transpose(self.data_np, [3, 0, 1, 2])
+
+        # self.data_np = ndimage.zoom(self.data_np, (1, 1, 256 / 240, 256 / 240), order=3)
         self.ori_shape = self.data_np.shape
         print(self.ori_shape)
 
@@ -80,6 +28,7 @@ class Img_DataSet(Dataset):
         # min_v = np.min(self.data_np)
         # self.data_np = (self.data_np - min_v) / (max_v - min_v)
         # self.data_np = (self.data_np - 0.5) * 2
+        self.data_np = self.data_np.astype(np.float32)
         max_v = np.max(self.data_np[0])
         self.data_np[0] = (self.data_np[0]) / max_v
         max_v = np.max(self.data_np[1])
@@ -88,8 +37,9 @@ class Img_DataSet(Dataset):
         self.data_np[2] = (self.data_np[2]) / max_v
         max_v = np.max(self.data_np[3])
         self.data_np[3] = (self.data_np[3]) / max_v
-        self.data_np = (self.data_np - 0.5) * 2
-        print(np.max(self.data_np))
+        # self.data_np = (self.data_np - 0.5) * 2
+        # print(np.max(self.data_np))
+        self.data_np = self.data_np[:,:64,:,:]
 
         self.resized_shape = self.data_np.shape
         # 扩展一定数量的slices，以保证卷积下采样合理运算
@@ -101,7 +51,9 @@ class Img_DataSet(Dataset):
         # 读取一个label文件 shape:[s,h,w]
         self.seg = sitk.ReadImage(label_path,sitk.sitkInt8)
         self.label_np = sitk.GetArrayFromImage(self.seg)
-        self.label_np = ndimage.zoom(self.label_np, (128/155, 128 / 240, 128 / 240), order=0)
+        print("label.shape:",self.label_np.shape)
+        self.label_np = self.label_np[:64,:,:]
+        # self.label_np = ndimage.zoom(self.label_np, (1, 256 / 240, 256 / 240), order=0)
         if self.n_labels==2:
             self.label_np[self.label_np > 0] = 1
         self.label = torch.from_numpy(np.expand_dims(self.label_np,axis=0)).long()

@@ -210,6 +210,9 @@ class UNETR(nn.Module):
 
     def forward(self, x_in):
         x, hidden_states_out = self.vit(x_in)
+        # print(x.shape)
+        # print(len(hidden_states_out))
+        # print(hidden_states_out[0].shape)
         enc1 = self.encoder1(x_in)
         x2 = hidden_states_out[0]
         enc2 = self.encoder2(self.proj_feat(x2, self.hidden_size, self.feat_size))
@@ -223,22 +226,18 @@ class UNETR(nn.Module):
         dec1 = self.decoder3(dec2, enc2)
         out = self.decoder2(dec1, enc1)
         logits = self.out(out)
-        # output = self.output1(logits)
+        output = self.output1(logits)
         if self.training:
-            # dec1 = self.output5(dec1)
-            # dec2 = self.output4(dec2)
-            # dec3 = self.output3(dec3)
-            # dec4 = self.output2(dec4)
-            return logits
-            # return dec1,dec2,dec3,dec4,output
+            return output
         else:
-            return logits
+            return output
+
 if __name__ == "__main__":
     device = torch.device('cpu')
     model = UNETR(
-        in_channels=4,
-        out_channels=1,
-        img_size=(128, 240, 240),
+        in_channels=2,
+        out_channels=4,
+        img_size=(128,240,240),
         feature_size=16,
         hidden_size=768,
         mlp_dim=3072,
@@ -248,7 +247,7 @@ if __name__ == "__main__":
         conv_block=True,
         res_block=True,
         dropout_rate=0.2).to(device)
-    input = torch.ones([2,4,128,240,240]).to(device)
+    input = torch.ones([2,2,128,240,240]).to(device)
     num_params = 0
     for param in model.parameters():
         num_params += param.numel()

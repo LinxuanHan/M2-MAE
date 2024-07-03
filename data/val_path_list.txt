@@ -1,0 +1,2 @@
+E:\3DUNet-BraTS2023_ET\data\data\BraTS-GLI-00360-000.nii.gz E:\3DUNet-BraTS2023_ET\data\label\BraTS-GLI-00360-000.nii.gz
+E:\3DUNet-BraTS2023_ET\data\data\BraTS-GLI-01408-000.nii.gz E:\3DUNet-BraTS2023_ET\data\label\BraTS-GLI-01408-000.nii.gz

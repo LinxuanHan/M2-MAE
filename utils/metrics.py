@@ -44,6 +44,7 @@ class DiceAverage(object):
     @staticmethod
     def get_dices(logits, targets):
         dices = []
+        # print(logits.shape,targets.shape)
         for class_index in range(targets.size()[1]):
             inter = torch.sum(logits[:, class_index, :, :, :] * targets[:, class_index, :, :, :])
             union = torch.sum(logits[:, class_index, :, :, :]) + torch.sum(targets[:, class_index, :, :, :])
